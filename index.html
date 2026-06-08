@@ -1093,16 +1093,17 @@
             const softnessA = a.isFocused ? 0.45 : 1;
             const softnessB = b.isFocused ? 0.45 : 1;
             const push = Math.min(overlapX / 2 + 8, 22);
-            const hitStrength = 34 + Math.min(overlapX, 28) * 1.35;
+            const relativeSpeed = Math.abs(a.vx - b.vx);
+            const rebound = 96 + Math.min(relativeSpeed, 150) * 0.48 + Math.min(overlapX, 30) * 1.85;
 
             a.x = clamp(a.x + direction * push * softnessA, a.minX, a.maxX);
             b.x = clamp(b.x - direction * push * softnessB, b.minX, b.maxX);
-            a.vx = clamp(a.vx + direction * -hitStrength * softnessA, -190, 190);
-            b.vx = clamp(b.vx + direction * hitStrength * softnessB, -190, 190);
+            a.vx = clamp(direction * rebound * softnessA, -210, 210);
+            b.vx = clamp(-direction * rebound * softnessB, -210, 210);
 
             const yDirection = ar.top <= br.top ? -1 : 1;
-            a.vy = clamp(a.vy + yDirection * -6 * softnessA, -20, 20);
-            b.vy = clamp(b.vy + yDirection * 6 * softnessB, -20, 20);
+            a.vy = clamp(a.vy + yDirection * 4 * softnessA, -20, 20);
+            b.vy = clamp(b.vy - yDirection * 4 * softnessB, -20, 20);
           }
         }
       }
