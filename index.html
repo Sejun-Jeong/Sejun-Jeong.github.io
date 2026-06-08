@@ -269,20 +269,8 @@
       font-size: 0.92rem;
     }
 
-    .visual-tile {
-      grid-column: span 8;
-      min-height: 470px;
-      background: #050607;
-    }
-
-    .visual-tile img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
     .contact-tile {
-      grid-column: span 4;
+      grid-column: span 5;
       min-height: 470px;
     }
 
@@ -476,7 +464,6 @@
 
       .hero,
       .profile-tile,
-      .visual-tile,
       .contact-tile,
       .resume-tile,
       .projects-tile,
@@ -485,9 +472,6 @@
         grid-column: 1 / -1;
       }
 
-      .visual-tile {
-        min-height: 360px;
-      }
     }
 
     @media (max-width: 640px) {
@@ -538,9 +522,6 @@
         padding-bottom: 10px;
       }
 
-      .visual-tile {
-        min-height: 260px;
-      }
     }
   </style>
 </head>
@@ -581,10 +562,6 @@
           <span>Computer Science Engineering</span>
         </div>
       </aside>
-
-      <section class="tile visual-tile" aria-label="Bento style portfolio visual">
-        <img src="assets/bento-visual.png" alt="Abstract bento grid visual showing Sejun, projects, and planned courses.">
-      </section>
 
       <section class="tile contact-tile" id="contact" aria-labelledby="contact-title">
         <div class="tile-content">
