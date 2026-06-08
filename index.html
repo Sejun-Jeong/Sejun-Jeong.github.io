@@ -82,7 +82,7 @@
     .site-nav.gamified-nav {
       flex: 1 1 auto;
       min-width: 0;
-      min-height: 52px;
+      min-height: 64px;
       padding: 4px;
       isolation: isolate;
     }
@@ -107,9 +107,25 @@
     }
 
     .site-nav.gamified-nav a.is-jumping {
-      z-index: 6;
+      z-index: 8;
       border-color: rgba(159, 196, 238, 0.7);
-      box-shadow: 0 12px 34px rgba(159, 196, 238, 0.18);
+      box-shadow:
+        0 18px 42px rgba(159, 196, 238, 0.24),
+        0 0 0 5px rgba(159, 196, 238, 0.1);
+    }
+
+    .site-nav.gamified-nav a.is-colliding {
+      border-color: rgba(244, 165, 138, 0.82);
+      background: rgba(244, 165, 138, 0.12);
+      box-shadow:
+        0 12px 30px rgba(244, 165, 138, 0.18),
+        0 0 0 4px rgba(244, 165, 138, 0.1);
+    }
+
+    .site-nav.gamified-nav a.is-evading {
+      z-index: 7;
+      border-color: rgba(217, 240, 143, 0.7);
+      box-shadow: 0 14px 34px rgba(217, 240, 143, 0.12);
     }
 
     .site-nav a:hover,
@@ -929,7 +945,7 @@
       }
 
       const links = Array.from(nav.querySelectorAll("a[href^='#']"));
-      const mobileNavQuery = window.matchMedia("(max-width: 760px), (pointer: coarse)");
+      const mobileNavQuery = window.matchMedia("(max-width: 760px)");
 
       function nowMs() {
         if (window.performance && typeof window.performance.now === "function") {
@@ -953,11 +969,29 @@
 
       function scheduleFrame(callback) {
         if ("requestAnimationFrame" in window) {
-          return window.requestAnimationFrame(callback);
+          let didRun = false;
+          const frameId = window.requestAnimationFrame((timestamp) => {
+            didRun = true;
+            callback(timestamp);
+          });
+
+          window.setTimeout(() => {
+            if (!didRun) {
+              callback(nowMs());
+            }
+          }, 40);
+
+          return frameId;
         }
 
         return window.setTimeout(() => callback(nowMs()), 16);
       }
+
+      const pointer = {
+        x: 0,
+        y: 0,
+        active: false
+      };
 
       const bodies = links.map((link, index) => ({
         element: link,
@@ -966,8 +1000,8 @@
         naturalY: 0,
         x: 0,
         y: 0,
-        vx: (Math.random() > 0.5 ? 1 : -1) * (8 + Math.random() * 9),
-        vy: (Math.random() - 0.5) * 5,
+        vx: (Math.random() > 0.5 ? 1 : -1) * (62 + Math.random() * 58),
+        vy: (Math.random() - 0.5) * 20,
         width: 0,
         height: 0,
         minX: 0,
@@ -978,8 +1012,11 @@
         isFocused: false,
         isJumping: false,
         jumpStart: 0,
-        jumpDuration: 460,
-        nextJumpAt: nowMs() + 1400 + Math.random() * 2600
+        jumpDuration: 330,
+        collisionUntil: 0,
+        collisionSpin: 0,
+        evadingUntil: 0,
+        nextJumpAt: nowMs() + 420 + Math.random() * 1100
       }));
 
       function clamp(value, min, max) {
@@ -1035,17 +1072,18 @@
       }
 
       function startJump(body, now) {
-        if (body.isJumping || body.isHovering || body.isFocused) {
+        if (body.isJumping || body.isFocused) {
           return;
         }
 
         body.isJumping = true;
         body.jumpStart = now;
-        body.nextJumpAt = now + 2600 + Math.random() * 4200;
-        body.vx += (Math.random() > 0.5 ? 1 : -1) * (7 + Math.random() * 5);
+        body.nextJumpAt = now + 900 + Math.random() * 1900;
+        body.vx += (Math.random() > 0.5 ? 1 : -1) * (64 + Math.random() * 42);
+        body.vy += (Math.random() - 0.5) * 30;
       }
 
-      function resolveCollisions() {
+      function resolveCollisions(now) {
         for (let i = 0; i < bodies.length; i += 1) {
           for (let j = i + 1; j < bodies.length; j += 1) {
             const a = bodies[i];
@@ -1062,18 +1100,23 @@
             const aCenter = ar.left + a.width / 2;
             const bCenter = br.left + b.width / 2;
             const direction = aCenter <= bCenter ? -1 : 1;
-            const softnessA = a.isHovering || a.isFocused ? 0.35 : 1;
-            const softnessB = b.isHovering || b.isFocused ? 0.35 : 1;
-            const push = Math.min(overlapX / 2 + 1.4, 5);
+            const softnessA = a.isFocused ? 0.45 : 1;
+            const softnessB = b.isFocused ? 0.45 : 1;
+            const push = Math.min(overlapX / 2 + 8, 22);
+            const hitStrength = 34 + Math.min(overlapX, 28) * 1.35;
 
             a.x = clamp(a.x + direction * push * softnessA, a.minX, a.maxX);
             b.x = clamp(b.x - direction * push * softnessB, b.minX, b.maxX);
-            a.vx = clamp(a.vx + direction * -7 * softnessA, -18, 18);
-            b.vx = clamp(b.vx + direction * 7 * softnessB, -18, 18);
+            a.vx = clamp(a.vx + direction * -hitStrength * softnessA, -140, 140);
+            b.vx = clamp(b.vx + direction * hitStrength * softnessB, -140, 140);
 
             const yDirection = ar.top <= br.top ? -1 : 1;
-            a.vy = clamp(a.vy + yDirection * -1.8 * softnessA, -6, 6);
-            b.vy = clamp(b.vy + yDirection * 1.8 * softnessB, -6, 6);
+            a.vy = clamp(a.vy + yDirection * -16 * softnessA, -34, 34);
+            b.vy = clamp(b.vy + yDirection * 16 * softnessB, -34, 34);
+            a.collisionUntil = now + 180;
+            b.collisionUntil = now + 180;
+            a.collisionSpin = direction * -14;
+            b.collisionSpin = direction * 14;
           }
         }
       }
@@ -1081,28 +1124,47 @@
       function applyTransforms(now) {
         bodies.forEach((body) => {
           let jumpOffset = 0;
-          let scale = body.isHovering || body.isFocused ? 1.02 : 1;
+          let scale = body.isHovering || body.isFocused ? 1.03 : 1;
           let rotation = 0;
+          let nextZ = body.isHovering || body.isFocused ? "6" : "";
+          const isColliding = now < body.collisionUntil;
+          const isEvading = now < body.evadingUntil;
 
           if (body.isJumping) {
             const progress = clamp((now - body.jumpStart) / body.jumpDuration, 0, 1);
             const lift = Math.sin(progress * Math.PI);
-            jumpOffset = -14 * lift;
-            scale += 0.06 * lift;
-            rotation = (body.index % 2 === 0 ? -1 : 1) * 4 * lift;
-            body.element.style.zIndex = "6";
+            jumpOffset = -32 * lift;
+            scale += 0.13 * lift;
+            rotation = (body.index % 2 === 0 ? -1 : 1) * 16 * lift;
+            nextZ = "9";
             body.element.classList.add("is-jumping");
 
             if (progress >= 1) {
               body.isJumping = false;
-              body.element.style.zIndex = "";
               body.element.classList.remove("is-jumping");
             }
           } else {
-            body.element.style.zIndex = body.isHovering || body.isFocused ? "5" : "";
             body.element.classList.remove("is-jumping");
           }
 
+          if (isColliding) {
+            scale += 0.045;
+            rotation += body.collisionSpin;
+            nextZ = nextZ || "7";
+            body.element.classList.add("is-colliding");
+          } else {
+            body.element.classList.remove("is-colliding");
+          }
+
+          if (isEvading) {
+            scale += 0.025;
+            nextZ = body.isJumping ? "9" : "8";
+            body.element.classList.add("is-evading");
+          } else {
+            body.element.classList.remove("is-evading");
+          }
+
+          body.element.style.zIndex = nextZ;
           body.element.style.transform = `translate3d(${body.x.toFixed(2)}px, ${(body.y + jumpOffset).toFixed(2)}px, 0) scale(${scale.toFixed(3)}) rotate(${rotation.toFixed(2)}deg)`;
         });
       }
@@ -1110,11 +1172,23 @@
       bodies.forEach((body) => {
         const link = body.element;
         link.classList.add("nav-player");
-        link.addEventListener("mouseenter", () => {
+        link.addEventListener("mouseenter", (event) => {
           body.isHovering = true;
+          body.evadingUntil = nowMs() + 760;
+          const navRect = nav.getBoundingClientRect();
+          pointer.x = event.clientX - navRect.left;
+          pointer.y = event.clientY - navRect.top;
+          pointer.active = true;
         });
         link.addEventListener("mouseleave", () => {
           body.isHovering = false;
+        });
+        link.addEventListener("pointermove", (event) => {
+          const navRect = nav.getBoundingClientRect();
+          pointer.x = event.clientX - navRect.left;
+          pointer.y = event.clientY - navRect.top;
+          pointer.active = true;
+          body.evadingUntil = nowMs() + 420;
         });
         link.addEventListener("focus", () => {
           body.isFocused = true;
@@ -1134,42 +1208,48 @@
         lastFrame = now;
 
         bodies.forEach((body) => {
-          const isCalm = body.isHovering || body.isFocused;
-          const force = isCalm ? 1.2 : 4.2;
-          const speedLimit = isCalm ? 5 : 24;
+          const isKeyboardFocused = body.isFocused;
+          const force = isKeyboardFocused ? 3 : 36;
+          const speedLimit = isKeyboardFocused ? 16 : 140;
 
-          if (!isCalm) {
-            body.vx += (Math.random() - 0.5) * force * dt;
-            body.vy += (Math.random() - 0.5) * force * 0.45 * dt;
+          body.vx += (Math.random() - 0.5) * force * dt;
+          body.vy += (Math.random() - 0.5) * force * 0.75 * dt;
+
+          if (body.isHovering && pointer.active) {
+            const rect = bodyRect(body);
+            const centerX = rect.left + body.width / 2;
+            const centerY = rect.top + body.height / 2;
+            const dx = centerX - pointer.x;
+            const dy = centerY - pointer.y;
+            const distance = Math.max(Math.hypot(dx, dy), 1);
+            const escape = 190 * dt;
+            body.vx += (dx / distance) * escape;
+            body.vy += (dy / distance) * escape * 0.45;
           }
 
-          if (now > body.nextJumpAt && Math.random() < 0.012) {
+          if (now > body.nextJumpAt && Math.random() < 0.08) {
             startJump(body, now);
           }
 
-          body.vx = clamp(body.vx * (isCalm ? 0.92 : 0.997), -speedLimit, speedLimit);
-          body.vy = clamp(body.vy * (isCalm ? 0.9 : 0.992), -speedLimit * 0.38, speedLimit * 0.38);
-
-          if (isCalm) {
-            body.x += (0 - body.x) * 0.08;
-            body.y += (0 - body.y) * 0.08;
-          } else {
-            body.x += body.vx * dt;
-            body.y += body.vy * dt;
-          }
+          body.vx = clamp(body.vx * (isKeyboardFocused ? 0.94 : 0.997), -speedLimit, speedLimit);
+          body.vy = clamp(body.vy * (isKeyboardFocused ? 0.92 : 0.992), -speedLimit * 0.42, speedLimit * 0.42);
+          body.x += body.vx * dt * (isKeyboardFocused ? 0.85 : 1.9);
+          body.y += body.vy * dt * (isKeyboardFocused ? 0.65 : 1.35);
 
           if (body.x <= body.minX || body.x >= body.maxX) {
             body.x = clamp(body.x, body.minX, body.maxX);
-            body.vx *= -0.82;
+            body.vx *= -1.08;
+            body.collisionUntil = now + 130;
+            body.collisionSpin = body.vx > 0 ? -10 : 10;
           }
 
           if (body.y <= body.minY || body.y >= body.maxY) {
             body.y = clamp(body.y, body.minY, body.maxY);
-            body.vy *= -0.78;
+            body.vy *= -0.9;
           }
         });
 
-        resolveCollisions();
+        resolveCollisions(now);
         applyTransforms(now);
         scheduleFrame(frame);
       }
