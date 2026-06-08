@@ -71,13 +71,24 @@
     }
 
     .site-nav {
+      position: relative;
       display: flex;
       flex-wrap: wrap;
+      align-items: center;
       justify-content: flex-end;
       gap: 8px;
     }
 
+    .site-nav.gamified-nav {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 52px;
+      padding: 4px;
+      isolation: isolate;
+    }
+
     .site-nav a {
+      position: relative;
       min-height: 36px;
       padding: 9px 12px;
       border: 1px solid transparent;
@@ -85,6 +96,20 @@
       color: rgba(244, 241, 236, 0.74);
       font-size: 0.88rem;
       line-height: 1;
+      transform: translate3d(0, 0, 0);
+      transform-origin: center;
+      touch-action: manipulation;
+    }
+
+    .site-nav.gamified-nav a {
+      background: rgba(244, 241, 236, 0.03);
+      will-change: transform;
+    }
+
+    .site-nav.gamified-nav a.is-jumping {
+      z-index: 6;
+      border-color: rgba(159, 196, 238, 0.7);
+      box-shadow: 0 12px 34px rgba(159, 196, 238, 0.18);
     }
 
     .site-nav a:hover,
@@ -92,6 +117,12 @@
       color: var(--panel);
       border-color: var(--line);
       outline: none;
+    }
+
+    .site-nav.gamified-nav a:hover,
+    .site-nav.gamified-nav a:focus-visible {
+      background: rgba(244, 241, 236, 0.08);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.18);
     }
 
     .page {
@@ -672,6 +703,11 @@
         animation: none;
       }
 
+      .site-nav.gamified-nav a {
+        transform: none !important;
+        box-shadow: none;
+      }
+
       @keyframes spotlight-soft {
         0% {
           outline: 0 solid rgba(159, 196, 238, 0);
@@ -884,6 +920,264 @@
         window.setTimeout(startSpotlight, motionQuery.matches ? 0 : 90);
       });
     });
+
+    function initGamifiedNav() {
+      const nav = document.querySelector(".site-nav");
+
+      if (!nav) {
+        return;
+      }
+
+      const links = Array.from(nav.querySelectorAll("a[href^='#']"));
+      const mobileNavQuery = window.matchMedia("(max-width: 760px), (pointer: coarse)");
+
+      function nowMs() {
+        if (window.performance && typeof window.performance.now === "function") {
+          return window.performance.now();
+        }
+
+        return Date.now();
+      }
+
+      if (motionQuery.matches || mobileNavQuery.matches || links.length < 2) {
+        links.forEach((link) => {
+          link.style.transform = "";
+          link.style.zIndex = "";
+          link.classList.remove("nav-player", "is-jumping");
+        });
+        nav.classList.remove("gamified-nav");
+        return;
+      }
+
+      nav.classList.add("gamified-nav");
+
+      function scheduleFrame(callback) {
+        if ("requestAnimationFrame" in window) {
+          return window.requestAnimationFrame(callback);
+        }
+
+        return window.setTimeout(() => callback(nowMs()), 16);
+      }
+
+      const bodies = links.map((link, index) => ({
+        element: link,
+        index,
+        naturalX: 0,
+        naturalY: 0,
+        x: 0,
+        y: 0,
+        vx: (Math.random() > 0.5 ? 1 : -1) * (8 + Math.random() * 9),
+        vy: (Math.random() - 0.5) * 5,
+        width: 0,
+        height: 0,
+        minX: 0,
+        maxX: 0,
+        minY: 0,
+        maxY: 0,
+        isHovering: false,
+        isFocused: false,
+        isJumping: false,
+        jumpStart: 0,
+        jumpDuration: 460,
+        nextJumpAt: nowMs() + 1400 + Math.random() * 2600
+      }));
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function measureBodies() {
+        const transforms = links.map((link) => link.style.transform);
+        links.forEach((link) => {
+          link.style.transform = "translate3d(0, 0, 0)";
+        });
+
+        const navRect = nav.getBoundingClientRect();
+        const padding = 5;
+
+        bodies.forEach((body) => {
+          const rect = body.element.getBoundingClientRect();
+          body.naturalX = rect.left - navRect.left;
+          body.naturalY = rect.top - navRect.top;
+          body.width = rect.width;
+          body.height = rect.height;
+          body.minX = padding - body.naturalX;
+          body.maxX = navRect.width - body.naturalX - body.width - padding;
+          body.minY = padding - body.naturalY;
+          body.maxY = navRect.height - body.naturalY - body.height - padding;
+
+          if (body.minX > body.maxX) {
+            body.minX = 0;
+            body.maxX = 0;
+          }
+
+          if (body.minY > body.maxY) {
+            body.minY = 0;
+            body.maxY = 0;
+          }
+
+          body.x = clamp(body.x, body.minX, body.maxX);
+          body.y = clamp(body.y, body.minY, body.maxY);
+        });
+
+        links.forEach((link, index) => {
+          link.style.transform = transforms[index];
+        });
+      }
+
+      function bodyRect(body) {
+        return {
+          left: body.naturalX + body.x,
+          right: body.naturalX + body.x + body.width,
+          top: body.naturalY + body.y,
+          bottom: body.naturalY + body.y + body.height
+        };
+      }
+
+      function startJump(body, now) {
+        if (body.isJumping || body.isHovering || body.isFocused) {
+          return;
+        }
+
+        body.isJumping = true;
+        body.jumpStart = now;
+        body.nextJumpAt = now + 2600 + Math.random() * 4200;
+        body.vx += (Math.random() > 0.5 ? 1 : -1) * (7 + Math.random() * 5);
+      }
+
+      function resolveCollisions() {
+        for (let i = 0; i < bodies.length; i += 1) {
+          for (let j = i + 1; j < bodies.length; j += 1) {
+            const a = bodies[i];
+            const b = bodies[j];
+            const ar = bodyRect(a);
+            const br = bodyRect(b);
+            const overlapX = Math.min(ar.right, br.right) - Math.max(ar.left, br.left);
+            const overlapY = Math.min(ar.bottom, br.bottom) - Math.max(ar.top, br.top);
+
+            if (overlapX <= 0 || overlapY <= 0) {
+              continue;
+            }
+
+            const aCenter = ar.left + a.width / 2;
+            const bCenter = br.left + b.width / 2;
+            const direction = aCenter <= bCenter ? -1 : 1;
+            const softnessA = a.isHovering || a.isFocused ? 0.35 : 1;
+            const softnessB = b.isHovering || b.isFocused ? 0.35 : 1;
+            const push = Math.min(overlapX / 2 + 1.4, 5);
+
+            a.x = clamp(a.x + direction * push * softnessA, a.minX, a.maxX);
+            b.x = clamp(b.x - direction * push * softnessB, b.minX, b.maxX);
+            a.vx = clamp(a.vx + direction * -7 * softnessA, -18, 18);
+            b.vx = clamp(b.vx + direction * 7 * softnessB, -18, 18);
+
+            const yDirection = ar.top <= br.top ? -1 : 1;
+            a.vy = clamp(a.vy + yDirection * -1.8 * softnessA, -6, 6);
+            b.vy = clamp(b.vy + yDirection * 1.8 * softnessB, -6, 6);
+          }
+        }
+      }
+
+      function applyTransforms(now) {
+        bodies.forEach((body) => {
+          let jumpOffset = 0;
+          let scale = body.isHovering || body.isFocused ? 1.02 : 1;
+          let rotation = 0;
+
+          if (body.isJumping) {
+            const progress = clamp((now - body.jumpStart) / body.jumpDuration, 0, 1);
+            const lift = Math.sin(progress * Math.PI);
+            jumpOffset = -14 * lift;
+            scale += 0.06 * lift;
+            rotation = (body.index % 2 === 0 ? -1 : 1) * 4 * lift;
+            body.element.style.zIndex = "6";
+            body.element.classList.add("is-jumping");
+
+            if (progress >= 1) {
+              body.isJumping = false;
+              body.element.style.zIndex = "";
+              body.element.classList.remove("is-jumping");
+            }
+          } else {
+            body.element.style.zIndex = body.isHovering || body.isFocused ? "5" : "";
+            body.element.classList.remove("is-jumping");
+          }
+
+          body.element.style.transform = `translate3d(${body.x.toFixed(2)}px, ${(body.y + jumpOffset).toFixed(2)}px, 0) scale(${scale.toFixed(3)}) rotate(${rotation.toFixed(2)}deg)`;
+        });
+      }
+
+      bodies.forEach((body) => {
+        const link = body.element;
+        link.classList.add("nav-player");
+        link.addEventListener("mouseenter", () => {
+          body.isHovering = true;
+        });
+        link.addEventListener("mouseleave", () => {
+          body.isHovering = false;
+        });
+        link.addEventListener("focus", () => {
+          body.isFocused = true;
+        });
+        link.addEventListener("blur", () => {
+          body.isFocused = false;
+        });
+      });
+
+      measureBodies();
+      window.addEventListener("resize", measureBodies);
+
+      let lastFrame = nowMs();
+
+      function frame(now) {
+        const dt = Math.min((now - lastFrame) / 1000, 0.05);
+        lastFrame = now;
+
+        bodies.forEach((body) => {
+          const isCalm = body.isHovering || body.isFocused;
+          const force = isCalm ? 1.2 : 4.2;
+          const speedLimit = isCalm ? 5 : 24;
+
+          if (!isCalm) {
+            body.vx += (Math.random() - 0.5) * force * dt;
+            body.vy += (Math.random() - 0.5) * force * 0.45 * dt;
+          }
+
+          if (now > body.nextJumpAt && Math.random() < 0.012) {
+            startJump(body, now);
+          }
+
+          body.vx = clamp(body.vx * (isCalm ? 0.92 : 0.997), -speedLimit, speedLimit);
+          body.vy = clamp(body.vy * (isCalm ? 0.9 : 0.992), -speedLimit * 0.38, speedLimit * 0.38);
+
+          if (isCalm) {
+            body.x += (0 - body.x) * 0.08;
+            body.y += (0 - body.y) * 0.08;
+          } else {
+            body.x += body.vx * dt;
+            body.y += body.vy * dt;
+          }
+
+          if (body.x <= body.minX || body.x >= body.maxX) {
+            body.x = clamp(body.x, body.minX, body.maxX);
+            body.vx *= -0.82;
+          }
+
+          if (body.y <= body.minY || body.y >= body.maxY) {
+            body.y = clamp(body.y, body.minY, body.maxY);
+            body.vy *= -0.78;
+          }
+        });
+
+        resolveCollisions();
+        applyTransforms(now);
+        scheduleFrame(frame);
+      }
+
+      scheduleFrame(frame);
+    }
+
+    initGamifiedNav();
 
     const promptElement = document.querySelector(".typewriter-prompt");
 
