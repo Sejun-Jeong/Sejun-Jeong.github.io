@@ -951,7 +951,7 @@
         links.forEach((link) => {
           link.style.transform = "";
           link.style.zIndex = "";
-          link.classList.remove("nav-player", "is-jumping");
+          link.classList.remove("nav-player", "is-jumping", "is-evading");
         });
         nav.classList.remove("gamified-nav");
         return;
@@ -1000,6 +1000,7 @@
         maxX: 0,
         minY: 0,
         maxY: 0,
+        isActive: false,
         isHovering: false,
         isFocused: false,
         isJumping: false,
@@ -1061,8 +1062,38 @@
         };
       }
 
+      function settleBody(body) {
+        body.isActive = false;
+        body.isJumping = false;
+        body.evadingUntil = 0;
+        body.x = 0;
+        body.y = 0;
+        body.vx = 0;
+        body.vy = 0;
+        body.element.style.transform = "";
+        body.element.style.zIndex = "";
+        body.element.classList.remove("is-jumping", "is-evading");
+      }
+
+      function activateBody(targetBody, now) {
+        bodies.forEach((body) => {
+          if (body !== targetBody) {
+            settleBody(body);
+          }
+        });
+
+        if (!targetBody.isActive) {
+          const direction = targetBody.index % 2 === 0 ? 1 : -1;
+          targetBody.vx = direction * (132 + Math.random() * 58);
+          targetBody.vy = (Math.random() - 0.5) * 12;
+          targetBody.nextJumpAt = now + 380 + Math.random() * 850;
+        }
+
+        targetBody.isActive = true;
+      }
+
       function startJump(body, now) {
-        if (body.isJumping || body.isFocused) {
+        if (!body.isActive || body.isJumping) {
           return;
         }
 
@@ -1078,6 +1109,11 @@
           for (let j = i + 1; j < bodies.length; j += 1) {
             const a = bodies[i];
             const b = bodies[j];
+
+            if (!a.isActive || !b.isActive) {
+              continue;
+            }
+
             const ar = bodyRect(a);
             const br = bodyRect(b);
             const overlapX = Math.min(ar.right, br.right) - Math.max(ar.left, br.left);
@@ -1096,20 +1132,32 @@
             const relativeSpeed = Math.abs(a.vx - b.vx);
             const rebound = 96 + Math.min(relativeSpeed, 150) * 0.48 + Math.min(overlapX, 30) * 1.85;
 
-            a.x = clamp(a.x + direction * push * softnessA, a.minX, a.maxX);
-            b.x = clamp(b.x - direction * push * softnessB, b.minX, b.maxX);
-            a.vx = clamp(direction * rebound * softnessA, -210, 210);
-            b.vx = clamp(-direction * rebound * softnessB, -210, 210);
-
             const yDirection = ar.top <= br.top ? -1 : 1;
-            a.vy = clamp(a.vy + yDirection * 4 * softnessA, -20, 20);
-            b.vy = clamp(b.vy - yDirection * 4 * softnessB, -20, 20);
+
+            if (a.isActive) {
+              a.x = clamp(a.x + direction * push * softnessA, a.minX, a.maxX);
+              a.vx = clamp(direction * rebound * softnessA, -210, 210);
+              a.vy = clamp(a.vy + yDirection * 4 * softnessA, -20, 20);
+            }
+
+            if (b.isActive) {
+              b.x = clamp(b.x - direction * push * softnessB, b.minX, b.maxX);
+              b.vx = clamp(-direction * rebound * softnessB, -210, 210);
+              b.vy = clamp(b.vy - yDirection * 4 * softnessB, -20, 20);
+            }
           }
         }
       }
 
       function applyTransforms(now) {
         bodies.forEach((body) => {
+          if (!body.isActive) {
+            body.element.style.transform = "";
+            body.element.style.zIndex = "";
+            body.element.classList.remove("is-jumping", "is-evading");
+            return;
+          }
+
           let jumpOffset = 0;
           let scale = body.isHovering || body.isFocused ? 1.03 : 1;
           let rotation = 0;
@@ -1149,6 +1197,14 @@
       bodies.forEach((body) => {
         const link = body.element;
         link.classList.add("nav-player");
+        link.addEventListener("click", () => {
+          activateBody(body, nowMs());
+        });
+        link.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            activateBody(body, nowMs());
+          }
+        });
         link.addEventListener("mouseenter", (event) => {
           body.isHovering = true;
           body.evadingUntil = nowMs() + 760;
@@ -1185,7 +1241,11 @@
         lastFrame = now;
 
         bodies.forEach((body) => {
-          const isKeyboardFocused = body.isFocused;
+          if (!body.isActive) {
+            return;
+          }
+
+          const isKeyboardFocused = body.isFocused && !body.isActive;
           const force = isKeyboardFocused ? 4 : 52;
           const speedLimit = isKeyboardFocused ? 20 : 190;
 
