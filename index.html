@@ -27,11 +27,13 @@
 
     html {
       scroll-behavior: smooth;
+      overflow-x: clip;
     }
 
     body {
       margin: 0;
       min-height: 100vh;
+      overflow-x: clip;
       background: var(--bg);
       color: var(--panel);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -95,6 +97,7 @@
     .page {
       width: min(1480px, calc(100% - 32px));
       margin: 0 auto;
+      overflow-x: clip;
       padding: 36px 0 60px;
     }
 
@@ -102,6 +105,7 @@
       display: grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
       gap: 18px;
+      perspective: 1400px;
     }
 
     .tile {
@@ -113,6 +117,8 @@
       background: var(--panel);
       color: var(--ink);
       scroll-margin: 120px;
+      backface-visibility: hidden;
+      transform-style: preserve-3d;
     }
 
     .tile.dark {
@@ -139,7 +145,7 @@
 
     .section-spotlight {
       z-index: 3;
-      animation: spotlight-pop 1.45s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+      animation: spotlight-pop 0.88s cubic-bezier(0.16, 0.96, 0.28, 1) both;
       transform-origin: center;
       will-change: transform, box-shadow, outline-color;
     }
@@ -148,29 +154,112 @@
       0% {
         outline: 0 solid rgba(159, 196, 238, 0);
         box-shadow: 0 0 0 rgba(159, 196, 238, 0);
-        transform: perspective(900px) translateY(0) scale(1) rotateX(0deg) rotateY(0deg);
+        transform: perspective(900px) translateY(0) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
       }
 
-      22% {
+      18% {
         outline: 2px solid rgba(159, 196, 238, 0.78);
         box-shadow:
-          0 22px 70px rgba(159, 196, 238, 0.22),
-          0 0 0 8px rgba(159, 196, 238, 0.12);
-        transform: perspective(900px) translateY(-12px) scale(1.035) rotateX(3deg) rotateY(-2deg);
+          0 24px 80px rgba(159, 196, 238, 0.28),
+          0 0 0 10px rgba(159, 196, 238, 0.14);
+        transform: perspective(900px) translateY(-14px) scale(1.045) rotateX(7deg) rotateY(-8deg) rotateZ(-1.2deg);
       }
 
-      56% {
+      43% {
         outline: 2px solid rgba(244, 241, 236, 0.7);
         box-shadow:
-          0 18px 58px rgba(244, 241, 236, 0.16),
-          0 0 0 5px rgba(159, 196, 238, 0.1);
-        transform: perspective(900px) translateY(-8px) scale(1.018) rotateX(1.4deg) rotateY(1deg);
+          0 20px 62px rgba(244, 241, 236, 0.16),
+          0 0 0 6px rgba(159, 196, 238, 0.1);
+        transform: perspective(900px) translateY(-8px) scale(1.022) rotateX(-4deg) rotateY(6deg) rotateZ(0.8deg);
+      }
+
+      70% {
+        outline: 2px solid rgba(159, 196, 238, 0.42);
+        box-shadow:
+          0 15px 44px rgba(159, 196, 238, 0.13),
+          0 0 0 3px rgba(159, 196, 238, 0.08);
+        transform: perspective(900px) translateY(-4px) scale(1.01) rotateX(2deg) rotateY(-2.5deg) rotateZ(-0.3deg);
       }
 
       100% {
         outline: 0 solid rgba(159, 196, 238, 0);
         box-shadow: 0 0 0 rgba(159, 196, 238, 0);
-        transform: perspective(900px) translateY(0) scale(1) rotateX(0deg) rotateY(0deg);
+        transform: perspective(900px) translateY(0) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+      }
+    }
+
+    .scroll-reveal {
+      opacity: 0;
+      transform-origin: center;
+      will-change: transform, opacity;
+    }
+
+    .scroll-reveal.from-left {
+      transform: perspective(1200px) translateX(-58vw) translateY(70px) scale(0.82) rotateX(34deg) rotateY(-1080deg) rotateZ(-16deg);
+    }
+
+    .scroll-reveal.from-right {
+      transform: perspective(1200px) translateX(58vw) translateY(70px) scale(0.82) rotateX(-34deg) rotateY(1080deg) rotateZ(16deg);
+    }
+
+    .scroll-reveal.is-landing.from-left {
+      animation: thrown-in-left 0.9s cubic-bezier(0.13, 0.92, 0.24, 1) both;
+    }
+
+    .scroll-reveal.is-landing.from-right {
+      animation: thrown-in-right 0.9s cubic-bezier(0.13, 0.92, 0.24, 1) both;
+    }
+
+    .scroll-reveal.is-landed {
+      opacity: 1;
+      transform: perspective(1200px) translateX(0) translateY(0) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+    }
+
+    .type-chunk {
+      white-space: pre-wrap;
+    }
+
+    @keyframes thrown-in-left {
+      0% {
+        opacity: 0;
+        transform: perspective(1200px) translateX(-58vw) translateY(76px) scale(0.82) rotateX(34deg) rotateY(-1080deg) rotateZ(-16deg);
+      }
+
+      48% {
+        opacity: 1;
+        transform: perspective(1200px) translateX(34px) translateY(-20px) scale(1.035) rotateX(-12deg) rotateY(-210deg) rotateZ(8deg);
+      }
+
+      73% {
+        opacity: 1;
+        transform: perspective(1200px) translateX(-10px) translateY(8px) scale(0.992) rotateX(5deg) rotateY(38deg) rotateZ(-3deg);
+      }
+
+      100% {
+        opacity: 1;
+        transform: perspective(1200px) translateX(0) translateY(0) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+      }
+    }
+
+    @keyframes thrown-in-right {
+      0% {
+        opacity: 0;
+        transform: perspective(1200px) translateX(58vw) translateY(76px) scale(0.82) rotateX(-34deg) rotateY(1080deg) rotateZ(16deg);
+      }
+
+      48% {
+        opacity: 1;
+        transform: perspective(1200px) translateX(-34px) translateY(-20px) scale(1.035) rotateX(12deg) rotateY(210deg) rotateZ(-8deg);
+      }
+
+      73% {
+        opacity: 1;
+        transform: perspective(1200px) translateX(10px) translateY(8px) scale(0.992) rotateX(-5deg) rotateY(-38deg) rotateZ(3deg);
+      }
+
+      100% {
+        opacity: 1;
+        transform: perspective(1200px) translateX(0) translateY(0) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
       }
     }
 
@@ -217,8 +306,8 @@
     }
 
     .hero {
-      grid-column: span 7;
-      min-height: 440px;
+      grid-column: span 8;
+      min-height: 540px;
     }
 
     .hero-copy {
@@ -253,8 +342,8 @@
     }
 
     .profile-tile {
-      grid-column: span 5;
-      min-height: 440px;
+      grid-column: span 4;
+      min-height: 540px;
     }
 
     .portrait {
@@ -281,30 +370,6 @@
 
     .avatar-fallback[hidden] {
       display: none;
-    }
-
-    .profile-label {
-      position: absolute;
-      right: 22px;
-      bottom: 22px;
-      z-index: 2;
-      display: grid;
-      gap: 4px;
-      width: min(320px, calc(100% - 44px));
-      padding: 18px 20px;
-      border-radius: 22px;
-      background: rgba(244, 241, 236, 0.92);
-      color: var(--ink);
-      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
-    }
-
-    .profile-label strong {
-      font-size: 1.15rem;
-    }
-
-    .profile-label span {
-      color: var(--muted);
-      font-size: 0.92rem;
     }
 
     .contact-tile {
@@ -555,7 +620,11 @@
 
       .hero,
       .profile-tile {
-        min-height: 380px;
+        min-height: 420px;
+      }
+
+      .profile-tile {
+        min-height: min(128vw, 560px);
       }
 
       .tile-content {
@@ -586,8 +655,17 @@
       }
 
       .section-spotlight {
-        animation: spotlight-soft 1.25s ease-out both;
+        animation: spotlight-soft 0.8s ease-out both;
         transform: none;
+      }
+
+      .scroll-reveal,
+      .scroll-reveal.from-left,
+      .scroll-reveal.from-right,
+      .scroll-reveal.is-landed {
+        opacity: 1;
+        transform: none;
+        animation: none;
       }
 
       .typewriter-prompt.is-typing::after {
@@ -645,10 +723,6 @@
       <aside class="tile blue profile-tile" aria-label="Profile photo or avatar">
         <img class="portrait" src="assets/profile.jpg" alt="Profile image or avatar for Sejun Jeong" onerror="this.style.display='none';document.querySelector('[data-avatar]').hidden=false;">
         <div class="avatar-fallback" data-avatar hidden aria-hidden="true">SJ</div>
-        <div class="profile-label">
-          <strong>SNU CSE</strong>
-          <span>Computer Science Engineering</span>
-        </div>
       </aside>
 
       <section class="tile contact-tile" id="contact" aria-labelledby="contact-title">
@@ -738,7 +812,7 @@
   </main>
   <script>
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const spotlightDuration = motionQuery.matches ? 1250 : 1500;
+    const spotlightDuration = motionQuery.matches ? 760 : 920;
     let activeSpotlight = null;
     let spotlightTimer = null;
     let spotlightRequestId = 0;
@@ -807,7 +881,7 @@
         };
 
         window.addEventListener("scrollend", startSpotlight, { once: true });
-        window.setTimeout(startSpotlight, motionQuery.matches ? 0 : 850);
+        window.setTimeout(startSpotlight, motionQuery.matches ? 0 : 90);
       });
     });
 
@@ -815,6 +889,7 @@
 
     if (promptElement) {
       const fullPrompt = promptElement.dataset.text || promptElement.textContent.trim();
+      const promptTile = promptElement.closest(".tile");
       promptElement.style.minHeight = `${Math.ceil(promptElement.getBoundingClientRect().height)}px`;
       promptElement.setAttribute("aria-label", fullPrompt);
 
@@ -845,7 +920,7 @@
           hasTyped = true;
           stopPromptWatching();
           const startedAt = Date.now();
-          const msPerCharacter = 24;
+          const msPerCharacter = 12;
           promptElement.classList.add("is-typing");
 
           const typeNext = () => {
@@ -869,11 +944,18 @@
         function checkPromptVisibility() {
           const rect = promptElement.getBoundingClientRect();
           const isVisible = rect.top < window.innerHeight * 0.88 && rect.bottom > 0;
+          const tileReady = !promptTile || !promptTile.classList.contains("scroll-reveal") || promptTile.classList.contains("is-landed");
 
-          if (isVisible) {
+          if (isVisible && tileReady) {
             typePrompt();
           }
         }
+
+        window.addEventListener("tilelanded", (event) => {
+          if (!promptTile || event.detail === promptTile) {
+            checkPromptVisibility();
+          }
+        });
 
         function armPromptFallback() {
           if (promptFallbackArmed) {
@@ -907,6 +989,186 @@
           armPromptFallback();
         }
       }
+    }
+
+    const revealTiles = Array.from(document.querySelectorAll(".tile"));
+    const tileTextChunks = new WeakMap();
+
+    function prepareTileText(tile) {
+      const content = tile.querySelector(".tile-content");
+
+      if (!content) {
+        return [];
+      }
+
+      const chunks = [];
+      const walker = document.createTreeWalker(content, 4, {
+        acceptNode(node) {
+          const parent = node.parentElement;
+
+          if (!parent || parent.closest(".typewriter-prompt")) {
+            return 2;
+          }
+
+          if (!node.nodeValue.trim()) {
+            return 2;
+          }
+
+          return 1;
+        }
+      });
+      const textNodes = [];
+
+      while (walker.nextNode()) {
+        textNodes.push(walker.currentNode);
+      }
+
+      textNodes.forEach((node) => {
+        const text = node.nodeValue.replace(/\s+/g, " ").trim();
+
+        if (!text) {
+          return;
+        }
+
+        const chunk = document.createElement("span");
+        chunk.className = "type-chunk";
+        chunk.dataset.text = text;
+        chunk.textContent = text;
+        node.replaceWith(chunk);
+        chunks.push(chunk);
+      });
+
+      return chunks;
+    }
+
+    function setChunks(chunks, visibleCharacters) {
+      let remaining = visibleCharacters;
+
+      chunks.forEach((chunk) => {
+        const text = chunk.dataset.text || "";
+        const nextText = remaining >= text.length ? text : text.slice(0, Math.max(0, remaining));
+        chunk.textContent = nextText;
+        remaining -= text.length;
+      });
+    }
+
+    function typeTileText(tile) {
+      const chunks = tileTextChunks.get(tile) || [];
+
+      if (!chunks.length) {
+        return;
+      }
+
+      const texts = chunks.map((chunk) => chunk.dataset.text || "");
+      const totalCharacters = texts.reduce((sum, text) => sum + text.length, 0);
+
+      if (motionQuery.matches || totalCharacters === 0) {
+        setChunks(chunks, totalCharacters);
+        return;
+      }
+
+      const startedAt = Date.now();
+      const msPerCharacter = 8;
+
+      function typeNext() {
+        const visibleCharacters = Math.min(
+          totalCharacters,
+          Math.floor((Date.now() - startedAt) / msPerCharacter)
+        );
+
+        setChunks(chunks, visibleCharacters);
+
+        if (visibleCharacters < totalCharacters) {
+          window.setTimeout(typeNext, 16);
+        }
+      }
+
+      typeNext();
+    }
+
+    function revealTile(tile) {
+      if (tile.dataset.revealed === "true") {
+        return;
+      }
+
+      tile.dataset.revealed = "true";
+      const chunks = tileTextChunks.get(tile) || [];
+      let finished = false;
+
+      if (!motionQuery.matches) {
+        setChunks(chunks, 0);
+      }
+
+      tile.classList.add("is-landing");
+
+      const finishLanding = () => {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+        tile.classList.remove("is-landing");
+        tile.classList.add("is-landed");
+        window.dispatchEvent(new CustomEvent("tilelanded", { detail: tile }));
+        typeTileText(tile);
+      };
+
+      tile.addEventListener("animationend", finishLanding, { once: true });
+      window.setTimeout(finishLanding, motionQuery.matches ? 0 : 1040);
+    }
+
+    function checkRevealVisibility() {
+      revealTiles.forEach((tile) => {
+        if (tile.dataset.revealed === "true") {
+          return;
+        }
+
+        const rect = tile.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight * 0.9 && rect.bottom > window.innerHeight * -0.1;
+
+        if (isVisible) {
+          revealTile(tile);
+        }
+      });
+    }
+
+    revealTiles.forEach((tile, index) => {
+      const chunks = prepareTileText(tile);
+      tileTextChunks.set(tile, chunks);
+
+      if (motionQuery.matches) {
+        tile.dataset.revealed = "true";
+        tile.classList.add("is-landed");
+        typeTileText(tile);
+        return;
+      }
+
+      tile.classList.add("scroll-reveal", index % 2 === 0 ? "from-left" : "from-right");
+    });
+
+    if (!motionQuery.matches) {
+      if ("IntersectionObserver" in window) {
+        try {
+          const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                revealObserver.unobserve(entry.target);
+                revealTile(entry.target);
+              }
+            });
+          }, { threshold: 0.18, rootMargin: "0px 0px -8% 0px" });
+
+          revealTiles.forEach((tile) => revealObserver.observe(tile));
+        } catch {
+          window.addEventListener("scroll", checkRevealVisibility, { passive: true });
+          window.addEventListener("resize", checkRevealVisibility);
+        }
+      } else {
+        window.addEventListener("scroll", checkRevealVisibility, { passive: true });
+        window.addEventListener("resize", checkRevealVisibility);
+      }
+
+      window.setTimeout(checkRevealVisibility, 120);
     }
   </script>
 </body>
