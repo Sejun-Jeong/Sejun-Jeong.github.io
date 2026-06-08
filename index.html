@@ -112,6 +112,7 @@
       border-radius: var(--radius);
       background: var(--panel);
       color: var(--ink);
+      scroll-margin: 120px;
     }
 
     .tile.dark {
@@ -134,6 +135,43 @@
       z-index: 1;
       height: 100%;
       padding: clamp(24px, 4vw, 42px);
+    }
+
+    .section-spotlight {
+      z-index: 3;
+      animation: spotlight-pop 1.45s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+      transform-origin: center;
+      will-change: transform, box-shadow, outline-color;
+    }
+
+    @keyframes spotlight-pop {
+      0% {
+        outline: 0 solid rgba(159, 196, 238, 0);
+        box-shadow: 0 0 0 rgba(159, 196, 238, 0);
+        transform: perspective(900px) translateY(0) scale(1) rotateX(0deg) rotateY(0deg);
+      }
+
+      22% {
+        outline: 2px solid rgba(159, 196, 238, 0.78);
+        box-shadow:
+          0 22px 70px rgba(159, 196, 238, 0.22),
+          0 0 0 8px rgba(159, 196, 238, 0.12);
+        transform: perspective(900px) translateY(-12px) scale(1.035) rotateX(3deg) rotateY(-2deg);
+      }
+
+      56% {
+        outline: 2px solid rgba(244, 241, 236, 0.7);
+        box-shadow:
+          0 18px 58px rgba(244, 241, 236, 0.16),
+          0 0 0 5px rgba(159, 196, 238, 0.1);
+        transform: perspective(900px) translateY(-8px) scale(1.018) rotateX(1.4deg) rotateY(1deg);
+      }
+
+      100% {
+        outline: 0 solid rgba(159, 196, 238, 0);
+        box-shadow: 0 0 0 rgba(159, 196, 238, 0);
+        transform: perspective(900px) translateY(0) scale(1) rotateX(0deg) rotateY(0deg);
+      }
     }
 
     .kicker {
@@ -436,6 +474,24 @@
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
       font-size: 0.95rem;
       line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+
+    .typewriter-prompt.is-typing::after {
+      content: "";
+      display: inline-block;
+      width: 0.62ch;
+      height: 1.2em;
+      margin-left: 0.18ch;
+      background: var(--blue);
+      vertical-align: -0.2em;
+      animation: cursor-blink 0.85s steps(1, end) infinite;
+    }
+
+    @keyframes cursor-blink {
+      50% {
+        opacity: 0;
+      }
     }
 
     .footer {
@@ -522,6 +578,38 @@
         padding-bottom: 10px;
       }
 
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      .section-spotlight {
+        animation: spotlight-soft 1.25s ease-out both;
+        transform: none;
+      }
+
+      .typewriter-prompt.is-typing::after {
+        animation: none;
+      }
+
+      @keyframes spotlight-soft {
+        0% {
+          outline: 0 solid rgba(159, 196, 238, 0);
+          box-shadow: 0 0 0 rgba(159, 196, 238, 0);
+        }
+
+        35% {
+          outline: 2px solid rgba(159, 196, 238, 0.78);
+          box-shadow: 0 0 0 7px rgba(159, 196, 238, 0.14);
+        }
+
+        100% {
+          outline: 0 solid rgba(159, 196, 238, 0);
+          box-shadow: 0 0 0 rgba(159, 196, 238, 0);
+        }
+      }
     }
   </style>
 </head>
@@ -636,7 +724,7 @@
           <p>
             This page was created with Codex as the coding agent. The site keeps the assignment requirements visible while using a bento-grid visual direction inspired by the provided Halcyon design reference.
           </p>
-          <div class="prompt">
+          <div class="prompt typewriter-prompt" data-text="Prompt used: read the Lab12 PDF, make the website satisfy page 42, and use the provided bento-grid design reference." aria-label="Prompt used: read the Lab12 PDF, make the website satisfy page 42, and use the provided bento-grid design reference.">
             Prompt used: read the Lab12 PDF, make the website satisfy page 42, and use the provided bento-grid design reference.
           </div>
         </div>
@@ -648,5 +736,178 @@
       <a href="https://sejun-jeong.github.io">sejun-jeong.github.io</a>
     </footer>
   </main>
+  <script>
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const spotlightDuration = motionQuery.matches ? 1250 : 1500;
+    let activeSpotlight = null;
+    let spotlightTimer = null;
+    let spotlightRequestId = 0;
+
+    function runSpotlight(target) {
+      if (activeSpotlight) {
+        activeSpotlight.classList.remove("section-spotlight");
+      }
+
+      window.clearTimeout(spotlightTimer);
+      activeSpotlight = target;
+      target.classList.remove("section-spotlight");
+      void target.offsetWidth;
+      target.classList.add("section-spotlight");
+
+      spotlightTimer = window.setTimeout(() => {
+        target.classList.remove("section-spotlight");
+        if (activeSpotlight === target) {
+          activeSpotlight = null;
+        }
+      }, spotlightDuration);
+    }
+
+    function findHashTarget(hash) {
+      if (!hash || hash === "#") {
+        return null;
+      }
+
+      try {
+        return document.getElementById(decodeURIComponent(hash.slice(1)));
+      } catch {
+        return null;
+      }
+    }
+
+    document.querySelectorAll('.site-nav a[href^="#"]').forEach((link) => {
+      link.addEventListener("click", (event) => {
+        const hash = link.getAttribute("href");
+        const target = findHashTarget(hash);
+
+        if (!target) {
+          return;
+        }
+
+        event.preventDefault();
+        const requestId = spotlightRequestId + 1;
+        spotlightRequestId = requestId;
+        target.scrollIntoView({
+          behavior: motionQuery.matches ? "auto" : "smooth",
+          block: "center"
+        });
+
+        let spotlightStarted = false;
+        const startSpotlight = () => {
+          if (spotlightStarted || requestId !== spotlightRequestId) {
+            window.removeEventListener("scrollend", startSpotlight);
+            return;
+          }
+
+          spotlightStarted = true;
+          window.removeEventListener("scrollend", startSpotlight);
+          if (location.hash !== hash) {
+            history.pushState(null, "", hash);
+          }
+          runSpotlight(target);
+        };
+
+        window.addEventListener("scrollend", startSpotlight, { once: true });
+        window.setTimeout(startSpotlight, motionQuery.matches ? 0 : 850);
+      });
+    });
+
+    const promptElement = document.querySelector(".typewriter-prompt");
+
+    if (promptElement) {
+      const fullPrompt = promptElement.dataset.text || promptElement.textContent.trim();
+      promptElement.style.minHeight = `${Math.ceil(promptElement.getBoundingClientRect().height)}px`;
+      promptElement.setAttribute("aria-label", fullPrompt);
+
+      if (motionQuery.matches) {
+        promptElement.textContent = fullPrompt;
+      } else {
+        let hasTyped = false;
+        let promptObserver = null;
+        let promptVisibilityTimer = null;
+        let promptFallbackArmed = false;
+        promptElement.textContent = "";
+
+        const stopPromptWatching = () => {
+          if (promptObserver) {
+            promptObserver.disconnect();
+          }
+
+          window.removeEventListener("scroll", checkPromptVisibility);
+          window.removeEventListener("resize", checkPromptVisibility);
+          window.clearTimeout(promptVisibilityTimer);
+        };
+
+        const typePrompt = () => {
+          if (hasTyped) {
+            return;
+          }
+
+          hasTyped = true;
+          stopPromptWatching();
+          const startedAt = Date.now();
+          const msPerCharacter = 24;
+          promptElement.classList.add("is-typing");
+
+          const typeNext = () => {
+            const visibleCharacters = Math.min(
+              fullPrompt.length,
+              Math.floor((Date.now() - startedAt) / msPerCharacter)
+            );
+            promptElement.textContent = fullPrompt.slice(0, visibleCharacters);
+
+            if (visibleCharacters < fullPrompt.length) {
+              window.setTimeout(typeNext, 24);
+              return;
+            }
+
+            promptElement.classList.remove("is-typing");
+          };
+
+          typeNext();
+        };
+
+        function checkPromptVisibility() {
+          const rect = promptElement.getBoundingClientRect();
+          const isVisible = rect.top < window.innerHeight * 0.88 && rect.bottom > 0;
+
+          if (isVisible) {
+            typePrompt();
+          }
+        }
+
+        function armPromptFallback() {
+          if (promptFallbackArmed) {
+            return;
+          }
+
+          promptFallbackArmed = true;
+          window.addEventListener("scroll", checkPromptVisibility, { passive: true });
+          window.addEventListener("resize", checkPromptVisibility);
+          promptVisibilityTimer = window.setTimeout(checkPromptVisibility, 240);
+        }
+
+        if ("IntersectionObserver" in window) {
+          try {
+            promptObserver = new IntersectionObserver((entries, observer) => {
+              if (entries.some((entry) => entry.isIntersecting)) {
+                observer.disconnect();
+                typePrompt();
+              }
+            }, { threshold: 0.35 });
+
+            promptObserver.observe(promptElement);
+          } catch {
+            promptElement.textContent = fullPrompt;
+          }
+        } else {
+          armPromptFallback();
+        }
+
+        if (!hasTyped && promptElement.textContent === "") {
+          armPromptFallback();
+        }
+      }
+    }
+  </script>
 </body>
 </html>
